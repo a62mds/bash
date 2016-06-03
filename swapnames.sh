@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 ##==============================================================================
 ## bash script that swaps the names of two files
+##
+## usage:
+##	swapnames file1 file2
 ##==============================================================================
 # Creates a random file name for the temporary file and generates the temporary
 # file in the directory containing the files whose names are to be swapped
