@@ -1,0 +1,10 @@
+#!/bin/bash
+##
+# Replaces spaces in all files in current or supplied directory with underscores. 
+# Based on solution found at:
+# http://stackoverflow.com/questions/2709458/bash-script-to-replace-spaces-in-file-names
+##
+
+if [[ -z ${1+x} ]]; then dir=$PWD; else dir=$1; fi
+
+find $dir -depth -name "* *" -execdir rename 's/ /_/g' "{}" \;

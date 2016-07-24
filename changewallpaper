@@ -10,4 +10,3 @@ PIC=$(ls $DIR/* | shuf -n1)
 
 # Set background image
 gsettings set org.gnome.desktop.background picture-uri "file://$PIC"
-
