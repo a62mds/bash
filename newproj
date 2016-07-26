@@ -58,5 +58,6 @@ case "$1" in
 		newScalaProject "$name";;
 	*)
 		printerr $UR_LANG_ERR
+		cd .. && rm -rf "$name"
 		exit 2
 esac

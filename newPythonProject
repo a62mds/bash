@@ -10,24 +10,76 @@
 # Create directory structure
 mkdir bin docs "$1" tests
 
-declare -a FILES=(""$1"/__init__.py" "tests/__init__.py" "tests/"$1"_tests.py")
-
+# Array of names of basic setup files
+declare -a FILES=("setup.py" \
+	""$1"/__init__.py" \
+	""$1"/"$1".py" \
+	"tests/__init__.py" \
+	"tests/"$1"_tests.py")
+# Create empty files w/ hashbang and filename
 for file in "${FILES[@]}"; do
 	echo "#!/usr/bin/env python" > "$file"
+	echo "# "$1"/"$file"" >> "$file"
 done
 
+# Write setup.py file
+echo "
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+	
+config = {
+    'description': '<++>',
+    'author': '<++>',
+    'url': '<++>',
+    'download_url': '<++>',
+    'author_email': '<++>',
+    'version': '<++>',
+    'install_requires': ['nose,<++>'],
+    'packages': ['"$1"'],
+    'scripts': ['<++>'],
+    'name': '"$1"'
+}
+
+setup(**config)
+
+#EOF" >> setup.py
+
+# Write basic main .py file
+echo "
+<++>import <++>
+
+
+<++>
+
+
+def main():
+    <++>
+
+
+if __name__=='__main__':
+    main()
+	
+	
+#EOF" >> "$1"/"$1".py
+
+# Write basic nosetest file
 echo "
 from nose.tools import *
 import "$1"
 
 
 def setup():
-	print("Setting up")
+    print("Setting up")
 
 
 def teardown():
-	print("Tearing down")
+    print("Tearing down")
 
 
 def test_basic():
-	print("Basic test")" >> tests/"$1"_tests.py
+    print("Basic test")
+
+	
+#EOF" >> tests/"$1"_tests.py
