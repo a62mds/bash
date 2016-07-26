@@ -1,13 +1,21 @@
 #!/bin/bash
+##
+# Call from within home directory of a new Scala project. Creates an sbt-compatible
+# directory tree and writes a basic build.sbt file
+#
+# usage:
+#   newScalaProject project-name
+# -> if project-name is not provided, prompts user for one
+##
 
-dir=${PWD##*/}
+# Get local Scala version
 scalaVersion=$(scala -version 2>&1 | sed 's/Scala code runner version \([^ ]*\).*/\1/; 1q')
 
-if [[ ${1+x} ]]; then name=$1; else name=$dir; fi 
-
+# Create sbt-compatible directory tree
 mkdir -p src/{main,test}/{java,resources,scala}
 mkdir lib project target
 
+# Create basic build.sbt file
 echo "name := \"$name\"
 version := \"1.0\"
 scalaVersion := \"$scalaVersion\"

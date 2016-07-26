@@ -1,0 +1,62 @@
+#!/bin/bash
+##
+# Call from within home directory of a new coding project to set up the
+# appropriate directory structure and create the necessary setup files.
+#
+# usage:
+#   newproj {cpp|python|scala} <project-name>
+# -> if programming language is not provided or not recognized, exits with error
+#    status 2
+# -> if project-name is not provided, prompts user for one
+# -> if directory with same name already exists, exits with error status 2
+##
+
+# Error messages
+NO_LANG_ERR="No programming language specified"
+UR_LANG_ERR="Programming language unrecognized"
+DIR_EXISTS_ERR="Directory already exists"
+# Prints error message to stdout
+function printerr {
+	echo "ERROR: "$@"
+	Usage: newproj {cpp|python|scala} <project-name>"
+}
+
+# If no programming language is specified, print error message and exit 2
+if ! [[ ${1+x} ]]; then 
+	printerr $NO_LANG_ERR
+	exit 2
+fi
+
+# If no project name is provided, prompt user for one
+if [[ ${2+x} ]]; then
+	name=$2
+else
+	while true; do
+		echo -n "Enter project name: >> "
+		read name
+		if ! [ -z "$name" ]; then break; fi
+	done
+fi 
+
+# If directory already exists, exit with error. Else, create directory and cd
+# to it.
+if [ -d $name ]; then
+	printerr $DIR_EXISTS_ERR
+	exit 2
+else 
+	mkdir $name && cd $name
+fi
+
+# Run appropriate script to set up language-specific directory structures and
+# to write the necessary setup files to the new directory
+case "$1" in
+	"cpp")
+		newCppProject "$name";;
+	"python")
+		newPythonProject "$name";;
+	"scala")
+		newScalaProject "$name";;
+	*)
+		printerr $UR_LANG_ERR
+		exit 2
+esac

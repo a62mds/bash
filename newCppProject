@@ -1,0 +1,75 @@
+#!/bin/bash
+##
+# Creates a new directory  
+#
+# usage:
+#   newCppProject <project-name>
+# -> if project-name is not provided, assumes the name of the project is the
+#    name of the home directory
+##
+
+# Create directory structure
+mkdir -p bin build doc include lib spike src tests/build
+
+touch tests/"$1"_tests.cpp
+
+# Create src/main.cpp
+echo "// "$1"
+// src/main.cpp
+
+int main(int argc, char* argv[]) {	
+	return 0;
+}" > src/main.cpp
+
+# Create tests/<project_name>_tests.cpp
+echo "// "$1"
+// tests/"$1"_tests.cpp
+
+#include <boost/test/unit_test.hpp>
+
+//EOF" > tests/"$1"_tests.cpp
+
+# Create Makefile
+echo "# "$1"
+CMPL=g++ -std=c++11
+CFLG=-I.
+
+SRC=main.cpp
+DEP=
+OBJ=\$(SRC:%.cpp=%.o)
+EXE="$1"
+
+TST_SRC="$1"_tests.cpp
+TST_OBJ=\$(TST_SRC:%.cpp=%.o)
+TST_EXE=\$(EXE)_tests
+
+.PHONY: compile set_perms run clean compile_tests run_tests
+
+compile: \$(EXE) | run_tests clean
+
+set_perms:
+	@chmod +x \$(EXE)
+	@chmod +x tests/\$(TST_EXE)
+
+run: \$(EXE) | set_perms
+	@./\$(EXE)
+
+clean:
+	rm -f build/* tests/build/*
+
+compile_tests: \$(TST_EXE)
+
+run_tests: \$(TST_EXE) | set_perms
+	@./tests/\$(TST_EXE)
+
+\$(EXE): \$(OBJ)
+	\$(CMPL) -o \$@ build/\$^ \$(CFLG)
+
+%.o: src/%.cpp \$(DEP)
+	\$(CMPL) -c -o build/\$@ $< \$(CFLG)
+	
+\$(TST_EXE): \$(TST_OBJ)
+	\$(CMPL) -o tests/\$@ tests/build/\$^ \$(CFLG)
+
+\$(TST_OBJ): tests/\$(TST_SRC) \$(DEP) 
+	\$(CMPL) -c -o tests/build/\$@ $< \$(CFLG)" > Makefile
