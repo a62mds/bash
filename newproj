@@ -1,32 +1,46 @@
 #!/bin/bash
+function printhelp {
+echo "$0
 ##
-# Call from within home directory of a new coding project to set up the
-# appropriate directory structure and create the necessary setup files.
+# Summary:
+#   Call from within parent directory of a new coding project to set up the
+#   project directory structure and create the necessary setup files. Directory
+#   structure and files created depends on the desired programming language.
+#   Currently supported languages are C++, Python, and Scala.
 #
-# usage:
-#   newproj {cpp|python|scala} <project-name>
-# -> if programming language is not provided or not recognized, exits with error
-#    status 2
-# -> if project-name is not provided, prompts user for one
-# -> if directory with same name already exists, exits with error status 2
+# Usage:
+#   newproj -l {cpp|python|scala} -n <project-name> [-a|-o|-q]
+#
+# Optional flags:
+#   -a    Adds files/directory structure to an existing home directory without
+#         altering the existing files. If
+#
+#   -o    Erases existing directory along with its included files and sub-
+#         directories
+#
+#   -q    Explicit do-not-overwrite flag
+#
+#   none  Default behavior mimics -q (do not overwrite existing)
+#
+# Notes:
+#   -> if programming language is not provided, prompts user for one
+#   -> if project-name is not provided, prompts user for one
 ##
+" >&1
+}
 
 # Error messages
-UNRECOG_LANG_ERR="Programming language unrecognized"
+UNRECOG_LANG_ERR="Programming language not supported"
 DIR_EXISTS_ERR="Directory already exists"
 OPT_NOT_RECOG_ERR="Invalid option"
 OPT_REQ_ARG_ERR="Option requires an argument"
 WRONG_ARG_NUM_ERR="Wrong number of arguments"
-# Prints error message to stdout
+
+# Prints usage message to stdout
 function printusage {
 	echo "
-	Usage: newproj -l {cpp|python|scala} -n <project-name> {-a|-o|-q}
+	Usage: newproj -l {cpp|python|scala} -n <project-name> [-a|-o|-q]
 	Help:  newproj -h" >&2
-}
-
-# Prints help menu
-function printhelp {
-	echo "Help menu" >&1
 }
 
 # If called with the single option -h, display help menu.
@@ -36,7 +50,7 @@ if [ $# = 1 ] && [ "$1" = "-h" ]; then
 fi
 
 # Process options supplied as arguments
-while getopts ":l:n:a" opt; do
+while getopts ":l:n:aoq" opt; do
 	case "$opt" in
 		l)
 			PROG_LANG="$OPTARG"
@@ -48,6 +62,12 @@ while getopts ":l:n:a" opt; do
 			;;
 		a)
 			ADD_TO_DIR=true
+			;;
+		o)
+			OVERWRITE=true
+			;;
+		q)
+			OVERWRITE=false
 			;;
 		\?)
 			echo "$OPT_NOT_RECOG_ERR: -$OPTARG" >&2
@@ -65,8 +85,9 @@ done
 # Ensure programming language has been specified
 if [[ -z "$PROG_LANG" ]]; then
 	while true; do
-		read -r -p "Language? {cpp|python|scala}: >> " PROG_LANG
-		# if user enters empty string (just presses enter), keep requesting 
+		read -r -p "Language? {cpp|python|scala} >> " PROG_LANG
+		# if user enters empty string (just presses enter), keep requesting
+		# programming language
 		if ! [[ -z "$PROG_LANG" ]]; then break; fi
 	done
 fi
@@ -74,7 +95,7 @@ fi
 # Ensure project name has been provided
 if [[ -z "$PROJ_NAME" ]]; then
 	while true; do
-		read -r -p "Enter project name: >> " PROJ_NAME
+		read -r -p "Project name? >> " PROJ_NAME
 		if ! [[ -z "$PROJ_NAME" ]]; then break; fi
 	done
 fi
@@ -83,11 +104,13 @@ fi
 # error status, depending on options provided
 if [ -d "$PROJ_NAME" ]; then
 	if [ "$OVERWRITE" = true ]; then
+		echo "Overwriting directory $PROJ_NAME" >&1
 		rm -rf "$PROJ_NAME" && mkdir "$PROJ_NAME" && cd "$PROJ_NAME"
 	elif [ "$ADD_TO_DIR" = true ]; then
+		echo "Appending to existing directory $PROJ_NAME" >&1
 		cd "$PROJ_NAME"
 	else
-		echo "$DIR_EXISTS_ERR" >&2
+		echo "$DIR_EXISTS_ERR: newproj called with option -q enabled" >&2
 		exit 2
 	fi
 else
@@ -98,14 +121,18 @@ fi
 # to write the necessary setup files to the new directory
 case "$PROG_LANG" in
 	"cpp")
-		newCppProject "$PROJ_NAME";;
+		newCppProject "$PROJ_NAME"
+		;;
 	"python")
-		newPythonProject "$PROJ_NAME";;
+		newPythonProject "$PROJ_NAME"
+		;;
 	"scala")
-		newScalaProject "$PROJ_NAME";;
+		newScalaProject "$PROJ_NAME"
+		;;
 	*)
 		echo "$UNRECOG_LANG_ERR" >&2
 		printusage
 		cd .. && rm -rf "$PROJ_NAME"
 		exit 2
+		;;
 esac

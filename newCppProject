@@ -1,55 +1,67 @@
 #!/bin/bash
 ##
-# Creates a new directory  
+# Creates a new C++ project directory with basic Makefile, source, and test
+# files.
 #
 # usage:
 #   newCppProject <project-name>
-# -> if project-name is not provided, assumes the name of the project is the
-#    name of the home directory
+# -> if project-name is not provided, prints usage info and exits with status 2
 ##
 
-# Create directory structure
-mkdir -p bin build doc include lib spike src tests/build
+##
+# Function definitions
+# 
+# prints usage information to stderr
+function printusage {
+	echo "Usage: newCppProject <project-name>" >&2
+}
+#
+# creates src/main.cpp
+function genmaincpp {
+echo "// $PROJ_NAME
+// $1
 
-touch tests/"$1"_tests.cpp
-
-# Create src/main.cpp
-echo "// "$1"
-// src/main.cpp
-
-int main(int argc, char* argv[]) {	
-  <++>
+int main(int argc, char* argv[]) {
+	//<++>
 	return 0;
-}" > src/main.cpp
+}
 
-# Create tests/<project_name>_tests.cpp
-echo "// "$1"
-// tests/"$1"_tests.cpp
+//EOF" > "$1"
+}
+#
+# creates tests/<project-name>_tests.cpp
+function genmaintestcpp {
+echo "// $PROJ_NAME
+// $1
 
-#define BOOST_TEST_MODULE "$1"
+#define BOOST_TEST_MODULE $PROJ_NAME
 #include <boost/test/included/unit_test.hpp>
 
 BOOST_AUTO_TEST_SUITE(test_suite1)
 
 BOOST_AUTO_TEST_CASE(tautology) {
-  BOOST_CHECK(1 == 1);
+	BOOST_CHECK(1 == 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-//EOF" > tests/"$1"_tests.cpp
+//EOF" > "$1"
+}
+#
+# creates a basic Makefile
+function genmakefile {
+echo "# $PROJ_NAME
+# $1
 
-# Create Makefile
-echo "# "$1"
 CMPL=g++ -std=c++11
 CFLG=-I.
 
-SRC=main.cpp
+SRC=$F_MAIN_CPP
 DEP=
 OBJ=\$(SRC:%.cpp=%.o)
-EXE="$1"
+EXE=$PROJ_NAME
 
-TST_SRC="$1"_tests.cpp
+TST_SRC=$F_MAIN_TESTS_CPP
 TST_OBJ=\$(TST_SRC:%.cpp=%.o)
 TST_EXE=\$(EXE)_tests
 
@@ -59,27 +71,98 @@ compile: \$(EXE) | run_tests clean
 
 set_perms:
 	@chmod +x \$(EXE)
-	@chmod +x tests/\$(TST_EXE)
+	@chmod +x $DIR_TESTS/\$(TST_EXE)
 
 run: \$(EXE) | set_perms
 	@./\$(EXE)
 
 clean:
-	@rm -f build/* tests/build/*
+	@rm -f $DIR_BUILD/* $DIR_TBUILD/*
 
 compile_tests: \$(TST_EXE)
 
 run_tests: \$(TST_EXE) | set_perms
-	@./tests/\$(TST_EXE)
+	@./$DIR_TESTS/\$(TST_EXE)
 
 \$(EXE): \$(OBJ)
-	\$(CMPL) -o \$@ build/\$^ \$(CFLG)
+	\$(CMPL) -o \$@ $DIR_BUILD/\$^ \$(CFLG)
 
 %.o: src/%.cpp \$(DEP)
-	\$(CMPL) -c -o build/\$@ $< \$(CFLG)
-	
-\$(TST_EXE): \$(TST_OBJ)
-	\$(CMPL) -o tests/\$@ tests/build/\$^ \$(CFLG)
+	\$(CMPL) -c -o $DIR_BUILD/\$@ $< \$(CFLG)
 
-\$(TST_OBJ): tests/\$(TST_SRC) \$(DEP) 
-	\$(CMPL) -c -o tests/build/\$@ $< \$(CFLG)" > Makefile
+\$(TST_EXE): \$(TST_OBJ)
+	\$(CMPL) -o $DIR_TESTS/\$@ $DIR_TBUILD/\$^ \$(CFLG)
+
+\$(TST_OBJ): $DIR_TESTS/\$(TST_SRC) \$(DEP) 
+	\$(CMPL) -c -o $DIR_TBUILD/\$@ $< \$(CFLG)
+
+#EOF" > "$1"
+}
+#
+## 
+
+##=============================================================================
+# Script starts here
+
+# Ensure project name has been provided
+if [ $# -ne 1 ]; then
+	printusage
+	exit 2
+else
+	PROJ_NAME="$@"
+fi
+
+# Directories
+DIR_BIN=bin
+DIR_BUILD=build
+DIR_DOC=doc
+DIR_INCL=include
+DIR_LIB=lib
+DIR_ETC=spike
+DIR_SRC=src
+DIR_TESTS=tests
+DIR_TBUILD="$DIR_TESTS/$DIR_BUILD"
+
+# Files
+F_MAIN_CPP=main.cpp
+F_MAIN_TESTS_CPP="${PROJ_NAME}_tests.cpp"
+F_MAKEFILE=Makefile
+
+# Create directory structure
+mkdir -p "$DIR_BIN" \
+				 "$DIR_BUILD" \
+				 "$DIR_DOC" \
+				 "$DIR_INCL" \
+				 "$DIR_LIB" \
+				 "$DIR_ETC" \
+				 "$DIR_SRC" \
+				 "$DIR_TESTS" \
+				 "$DIR_TBUILD"
+
+# Filenames
+MAIN_CPP="$DIR_SRC/$F_MAIN_CPP"
+MAIN_TESTS_CPP="$DIR_TESTS/$F_MAIN_TESTS_CPP"
+
+# Create src/main.cpp if it doesn't already exist
+if [ -f "$MAIN_CPP" ]; then
+	echo "Not overwriting existing file $MAIN_CPP"
+else
+  echo "Creating file $MAIN_CPP"
+  genmaincpp $MAIN_CPP
+fi
+
+# Create tests/<project_name>_tests.cpp
+if [ -f "$MAIN_TESTS_CPP" ]; then
+	echo "Not overwriting existing file $MAIN_TESTS_CPP"
+else
+  echo "Creating file $MAIN_TESTS_CPP"
+  genmaintestcpp $MAIN_TESTS_CPP
+fi
+
+# Create Makefile
+if [ -f "$F_Makefile" ]; then
+	echo "Not overwriting existing file $F_MAKEFILE"
+else
+	echo "Creating file $F_MAKEFILE"
+	genmakefile $F_MAKEFILE
+fi
