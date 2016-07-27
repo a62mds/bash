@@ -12,52 +12,100 @@
 ##
 
 # Error messages
-NO_LANG_ERR="No programming language specified"
-UR_LANG_ERR="Programming language unrecognized"
+UNRECOG_LANG_ERR="Programming language unrecognized"
 DIR_EXISTS_ERR="Directory already exists"
+OPT_NOT_RECOG_ERR="Invalid option"
+OPT_REQ_ARG_ERR="Option requires an argument"
+WRONG_ARG_NUM_ERR="Wrong number of arguments"
 # Prints error message to stdout
-function printerr {
-	echo "ERROR: "$@"
-	Usage: newproj {cpp|python|scala} <project-name>"
+function printusage {
+	echo "
+	Usage: newproj -l {cpp|python|scala} -n <project-name> {-a|-o|-q}
+	Help:  newproj -h" >&2
 }
 
-# If no programming language is specified, print error message and exit 2
-if ! [[ ${1+x} ]]; then 
-	printerr $NO_LANG_ERR
-	exit 2
+# Prints help menu
+function printhelp {
+	echo "Help menu" >&1
+}
+
+# If called with the single option -h, display help menu.
+if [ $# = 1 ] && [ "$1" = "-h" ]; then
+	printhelp
+	exit 0
 fi
 
-# If no project name is provided, prompt user for one
-if [[ ${2+x} ]]; then
-	name=$2
-else
-	while true; do
-		echo -n "Enter project name: >> "
-		read name
-		if ! [ -z "$name" ]; then break; fi
-	done
-fi 
+# Process options supplied as arguments
+while getopts ":l:n:a" opt; do
+	case "$opt" in
+		l)
+			PROG_LANG="$OPTARG"
+			echo "Language:     $OPTARG"
+			;;
+		n)
+			PROJ_NAME="$OPTARG"
+			echo "Project Name: $OPTARG"
+			;;
+		a)
+			ADD_TO_DIR=true
+			;;
+		\?)
+			echo "$OPT_NOT_RECOG_ERR: -$OPTARG" >&2
+			printusage
+			exit 2
+			;;
+		:)
+			echo "$OPT_REQ_ARG_ERR: -$OPTARG" >&2
+			printusage
+			exit 2
+			;;
+	esac
+done
 
-# If directory already exists, exit with error. Else, create directory and cd
-# to it.
-if [ -d $name ]; then
-	printerr $DIR_EXISTS_ERR
-	exit 2
-else 
-	mkdir $name && cd $name
+# Ensure programming language has been specified
+if [[ -z "$PROG_LANG" ]]; then
+	while true; do
+		read -r -p "Language? {cpp|python|scala}: >> " PROG_LANG
+		# if user enters empty string (just presses enter), keep requesting 
+		if ! [[ -z "$PROG_LANG" ]]; then break; fi
+	done
+fi
+
+# Ensure project name has been provided
+if [[ -z "$PROJ_NAME" ]]; then
+	while true; do
+		read -r -p "Enter project name: >> " PROJ_NAME
+		if ! [[ -z "$PROJ_NAME" ]]; then break; fi
+	done
+fi
+
+# If directory already exists, either overwrite, add to existing, or exit with
+# error status, depending on options provided
+if [ -d "$PROJ_NAME" ]; then
+	if [ "$OVERWRITE" = true ]; then
+		rm -rf "$PROJ_NAME" && mkdir "$PROJ_NAME" && cd "$PROJ_NAME"
+	elif [ "$ADD_TO_DIR" = true ]; then
+		cd "$PROJ_NAME"
+	else
+		echo "$DIR_EXISTS_ERR" >&2
+		exit 2
+	fi
+else
+	mkdir "$PROJ_NAME" && cd "$PROJ_NAME"
 fi
 
 # Run appropriate script to set up language-specific directory structures and
 # to write the necessary setup files to the new directory
-case "$1" in
+case "$PROG_LANG" in
 	"cpp")
-		newCppProject "$name";;
+		newCppProject "$PROJ_NAME";;
 	"python")
-		newPythonProject "$name";;
+		newPythonProject "$PROJ_NAME";;
 	"scala")
-		newScalaProject "$name";;
+		newScalaProject "$PROJ_NAME";;
 	*)
-		printerr $UR_LANG_ERR
-		cd .. && rm -rf "$name"
+		echo "$UNRECOG_LANG_ERR" >&2
+		printusage
+		cd .. && rm -rf "$PROJ_NAME"
 		exit 2
 esac
