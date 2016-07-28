@@ -10,14 +10,40 @@
 
 ##
 # Function definitions
-# 
+
 # prints usage information to stderr
-function printusage {
+printusage() {
 	echo "Usage: newCppProject <project-name>" >&2
 }
-#
+
+# Generate file only if it does not already exist
+#   usage:
+#     condgenfile {maincpp|maintst|makefile} <filename>
+condgenfile() {
+	if [ -f "$2" ]; then
+		echo "Not overwriting existing file $2"
+	else
+		echo "Creating file $2"
+		case "$1" in
+			maincpp)
+				genmaincpp "$2"
+				;;
+			maintst)
+				genmaintestcpp "$2"
+				;;
+			makefile)
+				genmakefile "$2"
+				;;
+			*)
+				echo "Check parameters passed to condgenfile" >&2
+				exit 2
+				;;
+		esac
+	fi
+}
+
 # creates src/main.cpp
-function genmaincpp {
+genmaincpp() {
 echo "// $PROJ_NAME
 // $1
 
@@ -28,9 +54,9 @@ int main(int argc, char* argv[]) {
 
 //EOF" > "$1"
 }
-#
+
 # creates tests/<project-name>_tests.cpp
-function genmaintestcpp {
+genmaintestcpp() {
 echo "// $PROJ_NAME
 // $1
 
@@ -47,9 +73,9 @@ BOOST_AUTO_TEST_SUITE_END()
 
 //EOF" > "$1"
 }
-#
+
 # creates a basic Makefile
-function genmakefile {
+genmakefile() {
 echo "# $PROJ_NAME
 # $1
 
@@ -123,10 +149,10 @@ DIR_SRC=src
 DIR_TESTS=tests
 DIR_TBUILD="$DIR_TESTS/$DIR_BUILD"
 
-# Files
+# Filenames
 F_MAIN_CPP=main.cpp
 F_MAIN_TESTS_CPP="${PROJ_NAME}_tests.cpp"
-F_MAKEFILE=Makefile
+MAKEFILE=Makefile
 
 # Create directory structure
 mkdir -p "$DIR_BIN" \
@@ -139,30 +165,18 @@ mkdir -p "$DIR_BIN" \
 				 "$DIR_TESTS" \
 				 "$DIR_TBUILD"
 
-# Filenames
+# Filenames w/ prepended directories
 MAIN_CPP="$DIR_SRC/$F_MAIN_CPP"
 MAIN_TESTS_CPP="$DIR_TESTS/$F_MAIN_TESTS_CPP"
 
 # Create src/main.cpp if it doesn't already exist
-if [ -f "$MAIN_CPP" ]; then
-	echo "Not overwriting existing file $MAIN_CPP"
-else
-  echo "Creating file $MAIN_CPP"
-  genmaincpp $MAIN_CPP
-fi
+condgenfile maincpp "$MAIN_CPP"
 
-# Create tests/<project_name>_tests.cpp
-if [ -f "$MAIN_TESTS_CPP" ]; then
-	echo "Not overwriting existing file $MAIN_TESTS_CPP"
-else
-  echo "Creating file $MAIN_TESTS_CPP"
-  genmaintestcpp $MAIN_TESTS_CPP
-fi
+# Create tests/<project_name>_tests.cpp if it doesn't exist
+condgenfile maintst "$MAIN_TESTS_CPP"
 
-# Create Makefile
-if [ -f "$F_Makefile" ]; then
-	echo "Not overwriting existing file $F_MAKEFILE"
-else
-	echo "Creating file $F_MAKEFILE"
-	genmakefile $F_MAKEFILE
-fi
+# Create Makefile if it doesn't exist
+condgenfile makefile "$MAKEFILE"
+
+echo "All done." >&1
+##

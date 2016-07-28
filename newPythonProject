@@ -1,34 +1,57 @@
 #!/bin/bash
 ##
-# Call from within home directory of a new Python project. 
+# Creates a new Python project directory with basic setup.py, <project-name>.py,
+# and <project-name>_tests.py files
 #
 # usage:
-#   newScalaProject project-name
-# -> if project-name is not provided, prompts user for one
+#   newPythonProject <project-name>
+# -> if project-name is not provided, prints usage info and exits with status 2
 ##
 
-# Create directory structure
-mkdir bin docs "$1" tests
+##
+# Function definitions
 
-# Array of names of basic setup files
-declare -a FILES=("setup.py" \
-	""$1"/__init__.py" \
-	""$1"/"$1".py" \
-	"tests/__init__.py" \
-	"tests/"$1"_tests.py")
-# Create empty files w/ hashbang and filename
-for file in "${FILES[@]}"; do
-	echo "#!/usr/bin/env python" > "$file"
-	echo "# "$1"/"$file"" >> "$file"
-done
+# prints usage information to stderr
+printusage() {
+	echo "Usage: newPythonProject <project-name>" >&2
+}
+
+# Generate file only if it does not already exist
+#   usage:
+#     condgenfile {setup|mainpy|nose} <filename>
+condgenfile() {
+	if [ -f "$2" ]; then
+		echo "Not overwriting existing file $2"
+	else
+		echo "Creating file $2"
+		case "$1" in
+		  setup)
+				gensetup "$2"
+				;;
+			mainpy)
+				genmainpy "$2"
+				;;
+			nose)
+				gennosefile "$2"
+				;;
+			*)
+				echo "Check parameters passed to condgenfile" >&2
+				exit 2
+				;;
+		esac
+	fi
+}
 
 # Write setup.py file
-echo "
+gensetup() {
+echo "#!/usr/bin/env python
+# $1
+
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-	
+
 config = {
     'description': '<++>',
     'author': '<++>',
@@ -37,17 +60,21 @@ config = {
     'author_email': '<++>',
     'version': '<++>',
     'install_requires': ['nose,<++>'],
-    'packages': ['"$1"'],
+    'packages': ['$PROJ_NAME'],
     'scripts': ['<++>'],
-    'name': '"$1"'
+    'name': '$PROJ_NAME'
 }
 
 setup(**config)
 
-#EOF" >> setup.py
+#EOF" >> "$1"
+}
 
 # Write basic main .py file
-echo "
+genmainpy() {
+echo "#!/usr/bin/env python
+# $1
+
 <++>import <++>
 
 
@@ -60,26 +87,73 @@ def main():
 
 if __name__=='__main__':
     main()
-	
-	
-#EOF" >> "$1"/"$1".py
+
+
+#EOF" >> "$1"
+}
 
 # Write basic nosetest file
-echo "
+gennosefile() {
+echo "#!/usr/bin/env python
+# $1
+
 from nose.tools import *
-import "$1"
+import "$F_MAIN_PY"
 
 
 def setup():
-    print("Setting up")
+    print(\"Setting up\")
 
 
 def teardown():
-    print("Tearing down")
+    print(\"Tearing down\")
 
 
 def test_basic():
-    print("Basic test")
+    print(\"Basic test\")
 
-	
-#EOF" >> tests/"$1"_tests.py
+
+#EOF" >> "$1"
+}
+## 
+
+##=============================================================================
+# Script starts here
+
+# Ensure project name has been provided
+if [ $# -ne 1 ]; then
+  printusage
+  exit 2
+else
+  PROJ_NAME="$@"
+fi
+
+# Directories
+DIR_BIN=bin
+DIR_DOCS=docs
+DIR_MAIN="$PROJ_NAME"
+DIR_TESTS=tests
+
+# Files
+F_SETUP_PY=setup.py
+F_MAIN_PY="$DIR_MAIN"/"$PROJ_NAME".py
+F_MAIN_TESTS_PY="$DIR_TESTS"/"$1"_tests.py
+
+
+# Create directory structure
+mkdir -p "$DIR_BIN" \
+         "$DIR_DOCS" \
+         "$DIR_MAIN" \
+         "$DIR_TESTS"
+
+# Create setup.py file if it doesn't already exist
+condgenfile setup "$F_SETUP_PY"
+
+# Create <project-name>/<project-name>.py
+condgenfile mainpy "$F_MAIN_PY"
+
+# Create tests/<project-name>_tests.py
+condgenfile nose "$F_MAIN_TESTS_PY"
+
+echo "All done."
+##
