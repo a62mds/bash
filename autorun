@@ -1,26 +1,43 @@
 #!/bin/bash
 #
+# autorun
 #
+# Watches the current directory for changes in the files in the current
+# directory (saved file, renamed file, moved file, new file, etc.)  and
+# runs a specified command on detection of a change.
 #
+# Usage:
+#   autorun <valid-bash-command>
+#
+# Requires:
+#   inotifywait
 
 #
-# Test for 'inotifywait' program
-#
+# Test for inotifywait
 if [ ! -x "/usr/bin/inotifywait" ]; then
-	echo "ERROR: Requires the 'inotifywait' program, which on a Debian-based system is"
-	echo "part of the 'inotify-tools' package. Please install and try again."
-	exit 1
+	echo "ERROR: Requires inotifywait"
+	exit 2
 fi
 
 #
-# Watch for changes in current directory 
-#
+# Watch for changes in current directory using inotifywait with options:
+#   -qq                 -> will output nothing at all, except in case of 
+#                          fatal errors
+#   --recursive         -> watch all subdirectories of any directories 
+#                          passed in as arguments
+#   --event <event>     -> listen for specific events only (here, writing 
+#                          to file, moving files, closing files)
+#   --exclude <pattern> -> do not process any events whose filename matches
+#                          the specified POSIX extended regular expression,
+#                          case insensitive
 while true; do
 	inotifywait -qq \
 		--recursive \
 		--event close_write,moved_to \
 		--exclude '^\..*\.sw[px]*$|4913|~$|.git/.*\.lock$|.*i\.log$|tmp/*' \
 		.
+  # If change is detected, clear console running this script, display time
+  # of change, and run command specified in $1
 	clear
 	echo "Change detected at $(date "+%H:%M:%S")"
 	$1
